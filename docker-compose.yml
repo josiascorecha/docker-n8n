@@ -18,8 +18,8 @@ services:
     image: n8nio/n8n:latest
     restart: always
     environment:
-      WEBHOOK_URL: http://SEU_IP_OU_DOMINIO:5678
-      N8N_HOST: SEU_IP_OU_DOMINIO
+      WEBHOOK_URL: http://72.62.11.29:5678
+      N8N_HOST: 72.62.11.29
       N8N_PORT: 5678
       N8N_PROTOCOL: http
       N8N_LOG_LEVEL: debug
