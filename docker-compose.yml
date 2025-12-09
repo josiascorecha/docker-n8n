@@ -5,6 +5,8 @@ services:
     image: devlikeapro/waha:latest
     restart: always
     environment:
+      # WAHA fala com o n8n pela rede interna do Docker, então
+      # continuamos usando o nome do serviço "n8n"
       WHATSAPP_HOOK_URL: http://n8n:5678/webhook/webhook
       WHATSAPP_DEFAULT_ENGINE: GOWS
       WHATSAPP_HOOK_EVENTS: message
@@ -18,18 +20,23 @@ services:
     image: n8nio/n8n:latest
     restart: always
     environment:
-      WEBHOOK_URL: http://72.62.11.29:5678
-      N8N_HOST: 72.62.11.29
+      # AGORA o n8n “se apresenta” usando o domínio
+      WEBHOOK_URL: https://j2tech.qzz.io
+      N8N_HOST: j2tech.qzz.io
       N8N_PORT: 5678
-      N8N_PROTOCOL: http
+      N8N_PROTOCOL: https
       N8N_LOG_LEVEL: debug
       N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: true
-      N8N_SECURE_COOKIE: "false"   # só até você ter HTTPS
+      # pode deixar false enquanto ajustamos HTTPS via Cloudflare
+      N8N_SECURE_COOKIE: "false"
       GENERIC_TIMEZONE: America/Sao_Paulo
     volumes:
       - n8n_data:/home/node/.n8n
     ports:
-      - "5678:5678"
+      # Porta 80 do servidor → 5678 do container
+      # Isso deixa o n8n acessível em http://SEU_IP:80
+      # e Cloudflare consegue falar com ele
+      - "80:5678"
 
 volumes:
   waha_sessions:
