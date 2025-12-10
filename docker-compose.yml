@@ -1,12 +1,52 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: SEU_POSTGRES_PASSWORD
+      POSTGRES_DB: n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # opcional: só se quiser acessar de fora
+      - "5432:5432"
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      # URL pública do n8n
+      WEBHOOK_URL: https://j2tech.qzz.io
+      N8N_HOST: j2tech.qzz.io
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      N8N_LOG_LEVEL: debug
+      N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: true
+      N8N_SECURE_COOKIE: "false"
+      GENERIC_TIMEZONE: America/Sao_Paulo
+
+      # Banco Postgres
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: SEU_POSTGRES_PASSWORD
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      # Porta 80 do host → 5678 do container (Cloudflare chega aqui)
+      - "80:5678"
+
   waha:
     image: devlikeapro/waha:latest
     restart: always
     environment:
-      # WAHA fala com o n8n pela rede interna do Docker, então
-      # continuamos usando o nome do serviço "n8n"
       WHATSAPP_HOOK_URL: http://n8n:5678/webhook/webhook
       WHATSAPP_DEFAULT_ENGINE: GOWS
       WHATSAPP_HOOK_EVENTS: message
@@ -16,29 +56,39 @@ services:
     ports:
       - "3000:3000"
 
-  n8n:
-    image: n8nio/n8n:latest
+  evolution-api:
+    image: atendai/evolution-api:latest
     restart: always
     environment:
-      # AGORA o n8n “se apresenta” usando o domínio
-      WEBHOOK_URL: https://j2tech.qzz.io
-      N8N_HOST: j2tech.qzz.io
-      N8N_PORT: 5678
-      N8N_PROTOCOL: https
-      N8N_LOG_LEVEL: debug
-      N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: true
-      # pode deixar false enquanto ajustamos HTTPS via Cloudflare
-      N8N_SECURE_COOKIE: "false"
-      GENERIC_TIMEZONE: America/Sao_Paulo
+      # PORTA INTERNA
+      SERVER_PORT: 8080
+
+      # Usuário/senha http basic (pra você proteger a API)
+      AUTHENTICATION: "true"
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      AUTHENTICATION_API_KEY: "SUA_CHAVE_SUPER_SECRETA"   # se usar API-KEY
+      # ou:
+      # AUTHENTICATION_USERNAME: "admin"
+      # AUTHENTICATION_PASSWORD: "SENHA_FORTE"
+
+      # URL pública (se for usar via Cloudflare depois)
+      # SERVER_URL: "https://api.j2tech.qzz.io"
+
+      # Configurações básicas
+      STORE_MESSAGES: "true"
+      STORE_CHAT: "true"
+      LOG_LEVEL: "info"
     volumes:
-      - n8n_data:/home/node/.n8n
+      - evolution_store:/evolution/store
     ports:
-      # Porta 80 do servidor → 5678 do container
-      # Isso deixa o n8n acessível em http://SEU_IP:80
-      # e Cloudflare consegue falar com ele
-      - "80:5678"
+      # Porta externa para chamar a Evolution API
+      - "8080:8080"
+    depends_on:
+      - postgres # só se for usar Postgres como store depois (opcional)
 
 volumes:
+  postgres_data:
+  n8n_data:
   waha_sessions:
   waha_media:
-  n8n_data:
+  evolution_store:
